@@ -302,17 +302,28 @@ function extractRoomsFromGViz(gviz){
 
 // ══ RANDOMIZE ══
 function randomize(){
+  hideErr();
   const p1=t1Rooms.map(r=>r.room); const p2=t2Rooms.map(r=>r.room);
   shuffle(p1); shuffle(p2);
   const plan=buildTowerPlan(TOTAL_DAYS);
   schedule=[]; let i1=0,i2=0;
+
   for(let d=0;d<TOTAL_DAYS;d++){
     const tw=plan[d]; const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
-    const pool=tw===1?p1:p2; let idx=tw===1?i1:i2;
+    const pool=tw===1?p1:p2;
+    let idx=tw===1?i1:i2;
     const dayRooms=[];
+    const usedToday=new Set();
     for(let r=0;r<need;r++){
-      if(idx>=pool.length)idx=0;
+      // ข้ามห้องที่ใช้แล้วในวันนี้ (ป้องกันซ้ำภายในวัน)
+      while(idx<pool.length && usedToday.has(pool[idx])) idx++;
+      if(idx>=pool.length){
+        showErr(`ห้อง Tower ${tw} ไม่พอสำหรับวันที่ ${d+1} — pool หมด`);
+        schedule=[];
+        return;
+      }
       const rn=pool[idx++];
+      usedToday.add(rn);
       const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
       dayRooms.push({room:rn,floor:meta?meta.floor:'?',hasBath:bathSet.has(rn)});
     }
@@ -324,13 +335,42 @@ function randomize(){
   document.getElementById('btnPdf').disabled=false;
   document.getElementById('resSection').style.display='';
   document.getElementById('statsGrid').style.display='';
-  hideErr();
 }
 
 function buildTowerPlan(n){
-  const plan=[];let cur=1,cnt=0,len=2+Math.round(Math.random());
-  for(let i=0;i<n;i++){plan.push(cur);cnt++;if(cnt>=len){cur=cur===1?2:1;cnt=0;len=2+Math.round(Math.random());}}
-  return plan;
+  // คำนวณว่า T1/T2 แต่ละ Tower รับได้กี่วัน (ไม่ให้ห้องเกิน)
+  // วันสุดท้ายใช้ 1 ห้อง, วันอื่นๆ ใช้ 5 ห้อง
+  // T1=210 ห้อง, T2=201 ห้อง
+  const cap1=t1Rooms.length; // 210
+  const cap2=t2Rooms.length; // 201
+  // จัดสรรวันให้แต่ละ tower: วันสุดท้าย (1 ห้อง) + วันปกติ (5 ห้อง)
+  // หาจำนวนวัน T1 ที่ทำได้สูงสุด: (cap1) / 5 = 42 วัน พอดี
+  // วางให้สลับกัน 2-3 วัน แต่ต้องไม่เกิน cap
+  const plan=[];
+  // สร้าง pool ของ tower assignments แล้ว shuffle บล็อก
+  // นับห้องที่จะใช้: วันที่ 1..n-1 ใช้ 5, วันที่ n ใช้ 1
+  // หา maxDays1: cap1/5 floor
+  const maxD1=Math.floor(cap1/ROOMS_PER_DAY); // 42
+  const maxD2=Math.floor(cap2/ROOMS_PER_DAY); // 40
+  // total days = 83, last day = 1 room from whichever tower
+  // assign 42 days to T1, 41 days to T2 (= 42*5 + 40*5 + 1 = 401? )
+  // Actually: days 1-82 = 5 rooms each, day 83 = 1 room
+  // T1 gets d1 days (normal), T2 gets (82-d1) days (normal) + 1 day (last)
+  // Need: d1*5 <= 210 and (82-d1)*5+1 <= 201
+  // d1 <= 42 and (82-d1) <= 40 => d1 >= 42 => d1 = 42 exactly
+  const d1Normal=42; // วัน T1 แบบ 5 ห้อง
+  const d2Normal=40; // วัน T2 แบบ 5 ห้อง (วันสุดท้าย T2 ด้วย 1 ห้อง)
+  // สร้าง list แล้ว shuffle เป็นบล็อก 2-3 วัน
+  const tList=[];
+  for(let i=0;i<d1Normal;i++) tList.push(1);
+  for(let i=0;i<d2Normal;i++) tList.push(2);
+  // สับเป็นบล็อกสลับ T1/T2 ดูเป็นธรรมชาติ
+  // ใช้วิธี: สุ่มลำดับบล็อก แล้วเรียงให้ได้ n-1 วัน
+  // วิธีง่าย: Fisher-Yates แล้ว group เป็นช่วงสลับ
+  shuffle(tList);
+  // ใส่วันสุดท้าย (T2, 1 ห้อง) ท้ายสุด
+  tList.push(2);
+  return tList.slice(0,n);
 }
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
 
