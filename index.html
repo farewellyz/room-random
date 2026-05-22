@@ -338,83 +338,19 @@ function randomize(){
 }
 
 function buildTowerPlan(n){
+  // สลับแบบตายตัว: T1 2 วัน, T2 2 วัน, T1 2 วัน, T2 2 วัน, ...
   // T1=210 ห้อง → 42 วัน (42×5=210)
   // T2=201 ห้อง → 40 วันปกติ (40×5=200) + 1 วันสุดท้าย (1 ห้อง) = 201
   // รวม 82 วันปกติ + 1 วันสุดท้าย = 83 วัน
-  // กฎ: สลับบล็อก T1/T2 ขนาด 2-3 วัน ห้ามติดกันเกิน 3 ห้ามน้อยกว่า 2
-  const d1Quota=42;
-  const d2Quota=40;
   const tList=[];
-  let rem1=d1Quota, rem2=d2Quota;
-  let cur=Math.random()<0.5?1:2;
-
-  while(rem1>0 || rem2>0){
-    const remCur=cur===1?rem1:rem2;
-    const remOther=cur===1?rem2:rem1;
-    if(remCur===0){cur=cur===1?2:1;continue;}
-    // ขนาดบล็อก 2-3 แต่ไม่เกิน remCur
-    let blockSize;
-    if(remCur===1){
-      // เหลือ 1 วัน ต้อง merge กับบล็อกก่อนหน้า ไม่เกิน 3
-      // ถ้า tList ยังว่าง หรือ tList สุดท้ายเป็น tower อื่น ให้ใช้ 1 ก่อน
-      // แต่เพื่อให้ได้อย่างน้อย 2 ให้ลดบล็อกก่อนหน้า (ถ้าเป็น 3) แล้วเพิ่มมาอยู่นี้
-      // วิธีง่าย: ใช้ 2 ถ้า remCur+remOther >= 4 ไม่งั้นใช้เท่าที่มี
-      blockSize=1; // กรณีฉุกเฉิน
-    } else {
-      // สุ่ม 2 หรือ 3 โดย bias ให้ balance กับอีก tower
-      const maxB=Math.min(3,remCur);
-      blockSize=(Math.random()<0.5)?2:maxB;
-    }
-    for(let i=0;i<blockSize;i++) tList.push(cur);
-    if(cur===1) rem1-=blockSize; else rem2-=blockSize;
-    cur=cur===1?2:1;
+  // วนรูปแบบ 1,1,2,2 ซ้ำจนครบ 82 วัน แล้วปิดท้ายด้วย T2
+  const pattern=[1,1,2,2];
+  for(let d=0;d<n-1;d++){
+    tList.push(pattern[d%4]);
   }
-
-  // ตรวจและแก้ไข: รวม run ที่ขนาด 1 เข้ากับ run ถัดไปหรือก่อนหน้า
-  // สร้าง runs
-  function getRuns(arr){
-    const runs=[];
-    let i=0;
-    while(i<arr.length){
-      let j=i;
-      while(j<arr.length&&arr[j]===arr[i])j++;
-      runs.push({t:arr[i],len:j-i,start:i});
-      i=j;
-    }
-    return runs;
-  }
-  // แก้ run=1: ดูดเข้า run ก่อนหน้า (ถ้า len<3) หรือ run ถัดไป
-  let fixed=tList.slice();
-  for(let pass=0;pass<5;pass++){
-    const runs=getRuns(fixed);
-    let changed=false;
-    for(let ri=0;ri<runs.length;ri++){
-      if(runs[ri].len===1){
-        // ลอง merge กับ run ก่อนหน้า (tower เดียวกัน ถ้า ri>=2)
-        if(ri>=2&&runs[ri-2].t===runs[ri].t&&runs[ri-2].len<3){
-          // เลื่อน 1 วันจาก ri ไปใส่ ri-2 แล้วลบ ri กับ ri-1 ออก 1
-          // ทำใหม่ง่ายๆ: สร้าง array ใหม่จาก runs
-          runs[ri-2].len+=1;
-          runs[ri-1].len-=1; // run คั่นกลางต้องลด 1 (อาจเหลือ 1 แต่ pass ต่อไปจะจัดการ)
-          runs[ri].len=0;
-          changed=true;
-        } else if(ri+2<runs.length&&runs[ri+2].t===runs[ri].t&&runs[ri+2].len<3){
-          runs[ri+2].len+=1;
-          runs[ri+1].len-=1;
-          runs[ri].len=0;
-          changed=true;
-        }
-      }
-    }
-    if(changed){
-      fixed=[];
-      for(const r of runs) for(let k=0;k<r.len;k++) fixed.push(r.t);
-    }
-  }
-
   // วันสุดท้าย (วันที่ 83) เป็น T2 เสมอ (1 ห้อง)
-  fixed.push(2);
-  return fixed.slice(0,n);
+  tList.push(2);
+  return tList;
 }
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
 
