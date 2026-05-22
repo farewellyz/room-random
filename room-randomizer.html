@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Room PMM Randomizer — Staybridge Suites Bangkok</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07090f;--surf:#0d1018;--surf2:#131722;--surf3:#1a1f2e;
+  --border:#1e2435;--border2:#252c3f;
+  --acc:#4f7ef5;--acc2:#7c55f0;--acc3:#06b6d4;
+  --green:#22d3a0;--red:#f56565;--yellow:#f5a623;
+  --text:#dde4f5;--text2:#aab4d0;--muted:#5a6480;
+  --t1:#4f7ef5;--t2:#7c55f0;
+  --r:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-glow::before{content:'';position:absolute;top:-20%;left:-10%;width:60%;height:60%;background:radial-gradient(ellipse,rgba(79,126,245,.08),transparent 70%)}
+.bg-glow::after{content:'';position:absolute;top:-10%;right:-10%;width:50%;height:50%;background:radial-gradient(ellipse,rgba(124,85,240,.06),transparent 70%)}
+.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(79,126,245,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(79,126,245,.025) 1px,transparent 1px);background-size:48px 48px}
+.app{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:36px 20px 60px}
+
+/* HEADER */
+.hdr{text-align:center;margin-bottom:48px}
+.logo-wrap{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--acc),var(--acc2));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 18px rgba(79,126,245,.4)}
+.logo-text{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+h1{font-size:clamp(26px,5vw,50px);font-weight:700;background:linear-gradient(135deg,#dde4f5 0%,#7eb3ff 40%,var(--acc2) 80%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1;margin-bottom:10px}
+.sub{color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.sub-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surf);border:1px solid var(--border2);border-radius:999px;padding:4px 12px;font-size:11px;font-family:'Space Mono',monospace}
+
+/* PANELS */
+.card{background:var(--surf);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:16px}
+.card-hdr{display:flex;align-items:center;gap:9px;margin-bottom:18px}
+.card-hdr-icon{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(79,126,245,.13)}
+.card-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace}
+.setup-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.field input{width:100%;padding:10px 13px;background:var(--surf2);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(79,126,245,.1)}
+.hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* BUTTONS */
+.btn-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.btn{padding:10px 20px;border-radius:8px;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px;transition:all .18s;white-space:nowrap}
+.btn-pri{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 4px 16px rgba(79,126,245,.35)}
+.btn-pri:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(79,126,245,.45)}
+.btn-sec{background:var(--surf2);border:1.5px solid var(--border2);color:var(--text2)}
+.btn-sec:hover:not(:disabled){border-color:var(--acc);color:var(--acc)}
+.btn-grn{background:linear-gradient(135deg,#22d3a0,#059669);color:#fff;box-shadow:0 4px 16px rgba(34,211,160,.3)}
+.btn-grn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 24px rgba(34,211,160,.4)}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none!important}
+
+/* STATUS */
+.status-bar{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:11px 16px;display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:16px;min-height:44px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.dot.ok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot.err{background:var(--red)}
+.dot.load{background:var(--yellow);animation:blink .6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* PROGRESS */
+.prog-wrap{background:var(--surf2);border-radius:999px;height:3px;margin-top:12px;overflow:hidden;display:none}
+.prog-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--acc),var(--acc2));width:0%;transition:width .4s}
+
+/* ERR */
+.err-box{background:rgba(245,101,101,.07);border:1px solid rgba(245,101,101,.25);border-radius:8px;padding:11px 15px;color:var(--red);font-size:13px;margin-bottom:14px;display:none}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:16px}
+.stat-card{background:var(--surf);border:1px solid var(--border);border-radius:11px;padding:13px 8px;text-align:center}
+.stat-val{font-family:'Space Mono',monospace;font-size:19px;font-weight:700;line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stat-card.blue .stat-val{color:var(--acc)}
+.stat-card.purple .stat-val{color:var(--acc2)}
+.stat-card.teal .stat-val{color:var(--acc3)}
+.stat-card.green .stat-val{color:var(--green)}
+.stat-card.red .stat-val{color:var(--red)}
+.stat-card.orange .stat-val{color:var(--yellow)}
+
+/* RESULTS / DAYS */
+.res-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.res-title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace}
+.res-badge{font-family:'Space Mono',monospace;font-size:11px;color:var(--acc);background:rgba(79,126,245,.1);border:1px solid rgba(79,126,245,.2);border-radius:5px;padding:3px 9px}
+.days-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(276px,1fr));gap:11px}
+.day-card{background:var(--surf);border:1px solid var(--border);border-radius:11px;overflow:hidden;transition:transform .14s,box-shadow .14s;animation:slideUp .24s ease both}
+.day-card:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(0,0,0,.55);border-color:var(--border2)}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.day-head{padding:9px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.day-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:'Space Mono',monospace}
+.day-num{font-family:'Space Mono',monospace;font-size:15px;font-weight:700}
+.tower-tag{font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;font-family:'Space Mono',monospace}
+.tower-tag.t1{background:rgba(79,126,245,.12);color:var(--t1);border:1px solid rgba(79,126,245,.24)}
+.tower-tag.t2{background:rgba(124,85,240,.12);color:var(--t2);border:1px solid rgba(124,85,240,.24)}
+.rooms-list{padding:8px 11px;display:flex;flex-direction:column;gap:3px}
+.room-item{display:flex;align-items:center;justify-content:space-between;padding:5px 9px;background:var(--surf2);border-radius:6px}
+.room-left{display:flex;align-items:center;gap:7px}
+.room-no{font-family:'Space Mono',monospace;font-size:12px;font-weight:700}
+.room-floor{font-size:10px;color:var(--muted);background:var(--surf3);padding:1px 5px;border-radius:3px}
+.bath-tag{font-size:10px;padding:2px 7px;border-radius:999px;font-weight:600}
+.bath-yes{background:rgba(34,211,160,.1);color:var(--green);border:1px solid rgba(34,211,160,.2)}
+.bath-no{background:rgba(245,101,101,.1);color:var(--red);border:1px solid rgba(245,101,101,.2)}
+
+@media(max-width:680px){.setup-row,.stats-grid{grid-template-columns:repeat(2,1fr)}.days-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="grid-bg"></div>
+<div class="app">
+
+  <div class="hdr">
+    <div class="logo-wrap">
+      <div class="logo-icon">🏨</div>
+      <div class="logo-text">Staybridge Suites Bangkok Sukhumvit</div>
+    </div>
+    <h1>Room PMM Randomizer</h1>
+    <div class="sub">
+      <span class="sub-chip">🏢 Tower 1 · 210 ห้อง</span>
+      <span class="sub-chip">🏢 Tower 2 · 201 ห้อง</span>
+      <span class="sub-chip">📋 83 วัน · 411 ห้อง</span>
+    </div>
+  </div>
+
+  <!-- SETUP -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-hdr-icon">⚙</div>
+      <div class="card-title">อัปเดตข้อมูลจาก Google Sheets (ไม่บังคับ)</div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6">ข้อมูลห้องทั้งหมดถูก embed ไว้แล้ว กด สุ่มได้เลย หรือโหลดใหม่จาก Sheet หากมีการแก้ไข</p>
+    <div class="setup-row">
+      <div class="field">
+        <label>Google Sheets ID</label>
+        <input type="text" id="sheetId" value="1mxez0xvqgWwX1fOqnJFjIEBQlJT1HvBvqUBIYSBx5bg">
+      </div>
+      <div class="field">
+        <label>Sheet ห้องทั้งหมด | Database</label>
+        <input type="text" id="sheetNames" value="ห้องทั้งหมด | database">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sec" onclick="loadFromSheets()">↓ โหลดใหม่จาก Sheets</button>
+    </div>
+    <div class="prog-wrap" id="prog"><div class="prog-bar" id="progBar"></div></div>
+  </div>
+
+  <div class="status-bar"><div class="dot ok" id="dot"></div><span id="statusTxt">พร้อมใช้งาน · T1: 210 · T2: 201 · มีอ่าง: 253 ห้อง</span></div>
+
+  <div class="btn-row" style="margin-bottom:16px">
+    <button class="btn btn-pri" id="btnRand" onclick="randomize()">🎲 สุ่ม 83 วัน (411 ห้อง)</button>
+    <button class="btn btn-sec" id="btnReset" onclick="resetAll()" disabled>↺ รีเซ็ต</button>
+    <button class="btn btn-grn" id="btnPdf" onclick="exportCalendarPDF()" disabled>↓ ดาวน์โหลด PDF (Calendar)</button>
+  </div>
+
+  <div class="err-box" id="errBox"></div>
+
+  <div class="stats-grid" id="statsGrid" style="display:none">
+    <div class="stat-card blue"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">ห้องทั้งหมด</div></div>
+    <div class="stat-card teal"><div class="stat-val" id="sDays">0</div><div class="stat-lbl">วัน</div></div>
+    <div class="stat-card blue"><div class="stat-val" id="sT1">0</div><div class="stat-lbl">Tower 1</div></div>
+    <div class="stat-card purple"><div class="stat-val" id="sT2">0</div><div class="stat-lbl">Tower 2</div></div>
+    <div class="stat-card green"><div class="stat-val" id="sBath">0</div><div class="stat-lbl">มีอ่าง 🛁</div></div>
+    <div class="stat-card red"><div class="stat-val" id="sNoBath">0</div><div class="stat-lbl">ไม่มีอ่าง 🚿</div></div>
+  </div>
+
+  <div id="resSection" style="display:none">
+    <div class="res-header">
+      <div class="res-title">📋 ตารางการสุ่มห้อง</div>
+      <div class="res-badge" id="resBadge"></div>
+    </div>
+    <div class="days-grid" id="daysGrid"></div>
+  </div>
+</div>
+
+<script>
+// ══ EMBEDDED DATA ══
+const EMBEDDED_T1 = [{"room": 1001, "floor": "10", "tower": 1}, {"room": 1002, "floor": "10", "tower": 1}, {"room": 1003, "floor": "10", "tower": 1}, {"room": 1004, "floor": "10", "tower": 1}, {"room": 1005, "floor": "10", "tower": 1}, {"room": 1006, "floor": "10", "tower": 1}, {"room": 1007, "floor": "10", "tower": 1}, {"room": 1008, "floor": "10", "tower": 1}, {"room": 1009, "floor": "10", "tower": 1}, {"room": 1010, "floor": "10", "tower": 1}, {"room": 1011, "floor": "10", "tower": 1}, {"room": 1012, "floor": "10", "tower": 1}, {"room": 1013, "floor": "10", "tower": 1}, {"room": 1014, "floor": "10", "tower": 1}, {"room": 1015, "floor": "10", "tower": 1}, {"room": 1016, "floor": "10", "tower": 1}, {"room": 1017, "floor": "10", "tower": 1}, {"room": 1018, "floor": "10", "tower": 1}, {"room": 1101, "floor": "11", "tower": 1}, {"room": 1102, "floor": "11", "tower": 1}, {"room": 1103, "floor": "11", "tower": 1}, {"room": 1104, "floor": "11", "tower": 1}, {"room": 1105, "floor": "11", "tower": 1}, {"room": 1106, "floor": "11", "tower": 1}, {"room": 1107, "floor": "11", "tower": 1}, {"room": 1108, "floor": "11", "tower": 1}, {"room": 1109, "floor": "11", "tower": 1}, {"room": 1110, "floor": "11", "tower": 1}, {"room": 1111, "floor": "11", "tower": 1}, {"room": 1112, "floor": "11", "tower": 1}, {"room": 1113, "floor": "11", "tower": 1}, {"room": 1114, "floor": "11", "tower": 1}, {"room": 1115, "floor": "11", "tower": 1}, {"room": 1116, "floor": "11", "tower": 1}, {"room": 1117, "floor": "11", "tower": 1}, {"room": 1118, "floor": "11", "tower": 1}, {"room": 1201, "floor": "12", "tower": 1}, {"room": 1202, "floor": "12", "tower": 1}, {"room": 1203, "floor": "12", "tower": 1}, {"room": 1204, "floor": "12", "tower": 1}, {"room": 1205, "floor": "12", "tower": 1}, {"room": 1206, "floor": "12", "tower": 1}, {"room": 1207, "floor": "12", "tower": 1}, {"room": 1208, "floor": "12", "tower": 1}, {"room": 1209, "floor": "12", "tower": 1}, {"room": 1210, "floor": "12", "tower": 1}, {"room": 1211, "floor": "12", "tower": 1}, {"room": 1212, "floor": "12", "tower": 1}, {"room": 1213, "floor": "12", "tower": 1}, {"room": 1214, "floor": "12", "tower": 1}, {"room": 1215, "floor": "12", "tower": 1}, {"room": 1216, "floor": "12", "tower": 1}, {"room": 1217, "floor": "12", "tower": 1}, {"room": 1218, "floor": "12", "tower": 1}, {"room": 1401, "floor": "14", "tower": 1}, {"room": 1402, "floor": "14", "tower": 1}, {"room": 1403, "floor": "14", "tower": 1}, {"room": 1404, "floor": "14", "tower": 1}, {"room": 1405, "floor": "14", "tower": 1}, {"room": 1406, "floor": "14", "tower": 1}, {"room": 1407, "floor": "14", "tower": 1}, {"room": 1408, "floor": "14", "tower": 1}, {"room": 1409, "floor": "14", "tower": 1}, {"room": 1410, "floor": "14", "tower": 1}, {"room": 1411, "floor": "14", "tower": 1}, {"room": 1412, "floor": "14", "tower": 1}, {"room": 1413, "floor": "14", "tower": 1}, {"room": 1414, "floor": "14", "tower": 1}, {"room": 1415, "floor": "14", "tower": 1}, {"room": 1416, "floor": "14", "tower": 1}, {"room": 1417, "floor": "14", "tower": 1}, {"room": 1418, "floor": "14", "tower": 1}, {"room": 1501, "floor": "15", "tower": 1}, {"room": 1503, "floor": "15", "tower": 1}, {"room": 1504, "floor": "15", "tower": 1}, {"room": 1505, "floor": "15", "tower": 1}, {"room": 1506, "floor": "15", "tower": 1}, {"room": 1507, "floor": "15", "tower": 1}, {"room": 1508, "floor": "15", "tower": 1}, {"room": 1509, "floor": "15", "tower": 1}, {"room": 1511, "floor": "15", "tower": 1}, {"room": 1512, "floor": "15", "tower": 1}, {"room": 1513, "floor": "15", "tower": 1}, {"room": 1514, "floor": "15", "tower": 1}, {"room": 1515, "floor": "15", "tower": 1}, {"room": 1516, "floor": "15", "tower": 1}, {"room": 1517, "floor": "15", "tower": 1}, {"room": 1601, "floor": "16", "tower": 1}, {"room": 1603, "floor": "16", "tower": 1}, {"room": 1604, "floor": "16", "tower": 1}, {"room": 1605, "floor": "16", "tower": 1}, {"room": 1606, "floor": "16", "tower": 1}, {"room": 1607, "floor": "16", "tower": 1}, {"room": 1608, "floor": "16", "tower": 1}, {"room": 1609, "floor": "16", "tower": 1}, {"room": 1611, "floor": "16", "tower": 1}, {"room": 1612, "floor": "16", "tower": 1}, {"room": 1613, "floor": "16", "tower": 1}, {"room": 1614, "floor": "16", "tower": 1}, {"room": 1615, "floor": "16", "tower": 1}, {"room": 1616, "floor": "16", "tower": 1}, {"room": 1617, "floor": "16", "tower": 1}, {"room": 1701, "floor": "17", "tower": 1}, {"room": 1703, "floor": "17", "tower": 1}, {"room": 1704, "floor": "17", "tower": 1}, {"room": 1705, "floor": "17", "tower": 1}, {"room": 1706, "floor": "17", "tower": 1}, {"room": 1707, "floor": "17", "tower": 1}, {"room": 1708, "floor": "17", "tower": 1}, {"room": 1709, "floor": "17", "tower": 1}, {"room": 1711, "floor": "17", "tower": 1}, {"room": 1712, "floor": "17", "tower": 1}, {"room": 1713, "floor": "17", "tower": 1}, {"room": 1714, "floor": "17", "tower": 1}, {"room": 1715, "floor": "17", "tower": 1}, {"room": 1716, "floor": "17", "tower": 1}, {"room": 1717, "floor": "17", "tower": 1}, {"room": 1801, "floor": "18", "tower": 1}, {"room": 1803, "floor": "18", "tower": 1}, {"room": 1804, "floor": "18", "tower": 1}, {"room": 1805, "floor": "18", "tower": 1}, {"room": 1806, "floor": "18", "tower": 1}, {"room": 1807, "floor": "18", "tower": 1}, {"room": 1808, "floor": "18", "tower": 1}, {"room": 1809, "floor": "18", "tower": 1}, {"room": 1811, "floor": "18", "tower": 1}, {"room": 1812, "floor": "18", "tower": 1}, {"room": 1813, "floor": "18", "tower": 1}, {"room": 1814, "floor": "18", "tower": 1}, {"room": 1815, "floor": "18", "tower": 1}, {"room": 1816, "floor": "18", "tower": 1}, {"room": 1817, "floor": "18", "tower": 1}, {"room": 1901, "floor": "19", "tower": 1}, {"room": 1903, "floor": "19", "tower": 1}, {"room": 1904, "floor": "19", "tower": 1}, {"room": 1905, "floor": "19", "tower": 1}, {"room": 1906, "floor": "19", "tower": 1}, {"room": 1908, "floor": "19", "tower": 1}, {"room": 1909, "floor": "19", "tower": 1}, {"room": 1911, "floor": "19", "tower": 1}, {"room": 1913, "floor": "19", "tower": 1}, {"room": 1914, "floor": "19", "tower": 1}, {"room": 1915, "floor": "19", "tower": 1}, {"room": 1916, "floor": "19", "tower": 1}, {"room": 1917, "floor": "19", "tower": 1}, {"room": 2001, "floor": "20", "tower": 1}, {"room": 2003, "floor": "20", "tower": 1}, {"room": 2004, "floor": "20", "tower": 1}, {"room": 2005, "floor": "20", "tower": 1}, {"room": 2006, "floor": "20", "tower": 1}, {"room": 2008, "floor": "20", "tower": 1}, {"room": 2009, "floor": "20", "tower": 1}, {"room": 2011, "floor": "20", "tower": 1}, {"room": 2013, "floor": "20", "tower": 1}, {"room": 2014, "floor": "20", "tower": 1}, {"room": 2015, "floor": "20", "tower": 1}, {"room": 2016, "floor": "20", "tower": 1}, {"room": 2017, "floor": "20", "tower": 1}, {"room": 2101, "floor": "21", "tower": 1}, {"room": 2103, "floor": "21", "tower": 1}, {"room": 2104, "floor": "21", "tower": 1}, {"room": 2105, "floor": "21", "tower": 1}, {"room": 2106, "floor": "21", "tower": 1}, {"room": 2108, "floor": "21", "tower": 1}, {"room": 2109, "floor": "21", "tower": 1}, {"room": 2111, "floor": "21", "tower": 1}, {"room": 2113, "floor": "21", "tower": 1}, {"room": 2114, "floor": "21", "tower": 1}, {"room": 2115, "floor": "21", "tower": 1}, {"room": 2116, "floor": "21", "tower": 1}, {"room": 2117, "floor": "21", "tower": 1}, {"room": 2201, "floor": "22", "tower": 1}, {"room": 2203, "floor": "22", "tower": 1}, {"room": 2204, "floor": "22", "tower": 1}, {"room": 2205, "floor": "22", "tower": 1}, {"room": 2206, "floor": "22", "tower": 1}, {"room": 2208, "floor": "22", "tower": 1}, {"room": 2209, "floor": "22", "tower": 1}, {"room": 2211, "floor": "22", "tower": 1}, {"room": 2213, "floor": "22", "tower": 1}, {"room": 2214, "floor": "22", "tower": 1}, {"room": 2215, "floor": "22", "tower": 1}, {"room": 2216, "floor": "22", "tower": 1}, {"room": 2217, "floor": "22", "tower": 1}, {"room": 2301, "floor": "23", "tower": 1}, {"room": 2303, "floor": "23", "tower": 1}, {"room": 2304, "floor": "23", "tower": 1}, {"room": 2305, "floor": "23", "tower": 1}, {"room": 2306, "floor": "23", "tower": 1}, {"room": 2308, "floor": "23", "tower": 1}, {"room": 2309, "floor": "23", "tower": 1}, {"room": 2311, "floor": "23", "tower": 1}, {"room": 2313, "floor": "23", "tower": 1}, {"room": 2314, "floor": "23", "tower": 1}, {"room": 2315, "floor": "23", "tower": 1}, {"room": 2316, "floor": "23", "tower": 1}, {"room": 2317, "floor": "23", "tower": 1}, {"room": 2401, "floor": "24", "tower": 1}, {"room": 2403, "floor": "24", "tower": 1}, {"room": 2404, "floor": "24", "tower": 1}, {"room": 2405, "floor": "24", "tower": 1}, {"room": 2406, "floor": "24", "tower": 1}, {"room": 2408, "floor": "24", "tower": 1}, {"room": 2409, "floor": "24", "tower": 1}, {"room": 2411, "floor": "24", "tower": 1}, {"room": 2413, "floor": "24", "tower": 1}, {"room": 2414, "floor": "24", "tower": 1}, {"room": 2415, "floor": "24", "tower": 1}, {"room": 2416, "floor": "24", "tower": 1}, {"room": 2417, "floor": "24", "tower": 1}];
+const EMBEDDED_T2 = [{"room": 1031, "floor": "10", "tower": 2}, {"room": 1032, "floor": "10", "tower": 2}, {"room": 1033, "floor": "10", "tower": 2}, {"room": 1034, "floor": "10", "tower": 2}, {"room": 1035, "floor": "10", "tower": 2}, {"room": 1037, "floor": "10", "tower": 2}, {"room": 1038, "floor": "10", "tower": 2}, {"room": 1039, "floor": "10", "tower": 2}, {"room": 1040, "floor": "10", "tower": 2}, {"room": 1042, "floor": "10", "tower": 2}, {"room": 1043, "floor": "10", "tower": 2}, {"room": 1044, "floor": "10", "tower": 2}, {"room": 1045, "floor": "10", "tower": 2}, {"room": 1131, "floor": "11", "tower": 2}, {"room": 1132, "floor": "11", "tower": 2}, {"room": 1133, "floor": "11", "tower": 2}, {"room": 1134, "floor": "11", "tower": 2}, {"room": 1135, "floor": "11", "tower": 2}, {"room": 1137, "floor": "11", "tower": 2}, {"room": 1138, "floor": "11", "tower": 2}, {"room": 1139, "floor": "11", "tower": 2}, {"room": 1140, "floor": "11", "tower": 2}, {"room": 1142, "floor": "11", "tower": 2}, {"room": 1143, "floor": "11", "tower": 2}, {"room": 1144, "floor": "11", "tower": 2}, {"room": 1145, "floor": "11", "tower": 2}, {"room": 1231, "floor": "12", "tower": 2}, {"room": 1232, "floor": "12", "tower": 2}, {"room": 1233, "floor": "12", "tower": 2}, {"room": 1234, "floor": "12", "tower": 2}, {"room": 1235, "floor": "12", "tower": 2}, {"room": 1237, "floor": "12", "tower": 2}, {"room": 1238, "floor": "12", "tower": 2}, {"room": 1239, "floor": "12", "tower": 2}, {"room": 1240, "floor": "12", "tower": 2}, {"room": 1242, "floor": "12", "tower": 2}, {"room": 1243, "floor": "12", "tower": 2}, {"room": 1244, "floor": "12", "tower": 2}, {"room": 1245, "floor": "12", "tower": 2}, {"room": 1431, "floor": "14", "tower": 2}, {"room": 1432, "floor": "14", "tower": 2}, {"room": 1433, "floor": "14", "tower": 2}, {"room": 1434, "floor": "14", "tower": 2}, {"room": 1435, "floor": "14", "tower": 2}, {"room": 1437, "floor": "14", "tower": 2}, {"room": 1438, "floor": "14", "tower": 2}, {"room": 1439, "floor": "14", "tower": 2}, {"room": 1440, "floor": "14", "tower": 2}, {"room": 1442, "floor": "14", "tower": 2}, {"room": 1443, "floor": "14", "tower": 2}, {"room": 1444, "floor": "14", "tower": 2}, {"room": 1445, "floor": "14", "tower": 2}, {"room": 1531, "floor": "15", "tower": 2}, {"room": 1532, "floor": "15", "tower": 2}, {"room": 1533, "floor": "15", "tower": 2}, {"room": 1534, "floor": "15", "tower": 2}, {"room": 1535, "floor": "15", "tower": 2}, {"room": 1537, "floor": "15", "tower": 2}, {"room": 1538, "floor": "15", "tower": 2}, {"room": 1539, "floor": "15", "tower": 2}, {"room": 1540, "floor": "15", "tower": 2}, {"room": 1542, "floor": "15", "tower": 2}, {"room": 1543, "floor": "15", "tower": 2}, {"room": 1544, "floor": "15", "tower": 2}, {"room": 1545, "floor": "15", "tower": 2}, {"room": 1631, "floor": "16", "tower": 2}, {"room": 1633, "floor": "16", "tower": 2}, {"room": 1634, "floor": "16", "tower": 2}, {"room": 1635, "floor": "16", "tower": 2}, {"room": 1637, "floor": "16", "tower": 2}, {"room": 1638, "floor": "16", "tower": 2}, {"room": 1639, "floor": "16", "tower": 2}, {"room": 1640, "floor": "16", "tower": 2}, {"room": 1642, "floor": "16", "tower": 2}, {"room": 1643, "floor": "16", "tower": 2}, {"room": 1644, "floor": "16", "tower": 2}, {"room": 1731, "floor": "17", "tower": 2}, {"room": 1733, "floor": "17", "tower": 2}, {"room": 1734, "floor": "17", "tower": 2}, {"room": 1735, "floor": "17", "tower": 2}, {"room": 1737, "floor": "17", "tower": 2}, {"room": 1738, "floor": "17", "tower": 2}, {"room": 1739, "floor": "17", "tower": 2}, {"room": 1740, "floor": "17", "tower": 2}, {"room": 1742, "floor": "17", "tower": 2}, {"room": 1743, "floor": "17", "tower": 2}, {"room": 1744, "floor": "17", "tower": 2}, {"room": 1831, "floor": "18", "tower": 2}, {"room": 1833, "floor": "18", "tower": 2}, {"room": 1834, "floor": "18", "tower": 2}, {"room": 1835, "floor": "18", "tower": 2}, {"room": 1837, "floor": "18", "tower": 2}, {"room": 1838, "floor": "18", "tower": 2}, {"room": 1839, "floor": "18", "tower": 2}, {"room": 1840, "floor": "18", "tower": 2}, {"room": 1842, "floor": "18", "tower": 2}, {"room": 1843, "floor": "18", "tower": 2}, {"room": 1844, "floor": "18", "tower": 2}, {"room": 1931, "floor": "19", "tower": 2}, {"room": 1933, "floor": "19", "tower": 2}, {"room": 1934, "floor": "19", "tower": 2}, {"room": 1935, "floor": "19", "tower": 2}, {"room": 1937, "floor": "19", "tower": 2}, {"room": 1938, "floor": "19", "tower": 2}, {"room": 1939, "floor": "19", "tower": 2}, {"room": 1940, "floor": "19", "tower": 2}, {"room": 1942, "floor": "19", "tower": 2}, {"room": 1943, "floor": "19", "tower": 2}, {"room": 1944, "floor": "19", "tower": 2}, {"room": 2031, "floor": "20", "tower": 2}, {"room": 2033, "floor": "20", "tower": 2}, {"room": 2034, "floor": "20", "tower": 2}, {"room": 2035, "floor": "20", "tower": 2}, {"room": 2037, "floor": "20", "tower": 2}, {"room": 2038, "floor": "20", "tower": 2}, {"room": 2039, "floor": "20", "tower": 2}, {"room": 2040, "floor": "20", "tower": 2}, {"room": 2042, "floor": "20", "tower": 2}, {"room": 2043, "floor": "20", "tower": 2}, {"room": 2044, "floor": "20", "tower": 2}, {"room": 2131, "floor": "21", "tower": 2}, {"room": 2133, "floor": "21", "tower": 2}, {"room": 2134, "floor": "21", "tower": 2}, {"room": 2135, "floor": "21", "tower": 2}, {"room": 2137, "floor": "21", "tower": 2}, {"room": 2139, "floor": "21", "tower": 2}, {"room": 2141, "floor": "21", "tower": 2}, {"room": 2143, "floor": "21", "tower": 2}, {"room": 2144, "floor": "21", "tower": 2}, {"room": 2231, "floor": "22", "tower": 2}, {"room": 2233, "floor": "22", "tower": 2}, {"room": 2234, "floor": "22", "tower": 2}, {"room": 2235, "floor": "22", "tower": 2}, {"room": 2237, "floor": "22", "tower": 2}, {"room": 2239, "floor": "22", "tower": 2}, {"room": 2241, "floor": "22", "tower": 2}, {"room": 2243, "floor": "22", "tower": 2}, {"room": 2244, "floor": "22", "tower": 2}, {"room": 2331, "floor": "23", "tower": 2}, {"room": 2333, "floor": "23", "tower": 2}, {"room": 2334, "floor": "23", "tower": 2}, {"room": 2335, "floor": "23", "tower": 2}, {"room": 2337, "floor": "23", "tower": 2}, {"room": 2339, "floor": "23", "tower": 2}, {"room": 2341, "floor": "23", "tower": 2}, {"room": 2343, "floor": "23", "tower": 2}, {"room": 2344, "floor": "23", "tower": 2}, {"room": 2431, "floor": "24", "tower": 2}, {"room": 2433, "floor": "24", "tower": 2}, {"room": 2434, "floor": "24", "tower": 2}, {"room": 2435, "floor": "24", "tower": 2}, {"room": 2437, "floor": "24", "tower": 2}, {"room": 2439, "floor": "24", "tower": 2}, {"room": 2441, "floor": "24", "tower": 2}, {"room": 2443, "floor": "24", "tower": 2}, {"room": 2444, "floor": "24", "tower": 2}, {"room": 2531, "floor": "25", "tower": 2}, {"room": 2533, "floor": "25", "tower": 2}, {"room": 2534, "floor": "25", "tower": 2}, {"room": 2535, "floor": "25", "tower": 2}, {"room": 2537, "floor": "25", "tower": 2}, {"room": 2539, "floor": "25", "tower": 2}, {"room": 2541, "floor": "25", "tower": 2}, {"room": 2543, "floor": "25", "tower": 2}, {"room": 2544, "floor": "25", "tower": 2}, {"room": 2631, "floor": "26", "tower": 2}, {"room": 2633, "floor": "26", "tower": 2}, {"room": 2634, "floor": "26", "tower": 2}, {"room": 2635, "floor": "26", "tower": 2}, {"room": 2637, "floor": "26", "tower": 2}, {"room": 2639, "floor": "26", "tower": 2}, {"room": 2641, "floor": "26", "tower": 2}, {"room": 2643, "floor": "26", "tower": 2}, {"room": 2644, "floor": "26", "tower": 2}, {"room": 2731, "floor": "27", "tower": 2}, {"room": 2733, "floor": "27", "tower": 2}, {"room": 2734, "floor": "27", "tower": 2}, {"room": 2735, "floor": "27", "tower": 2}, {"room": 2737, "floor": "27", "tower": 2}, {"room": 2739, "floor": "27", "tower": 2}, {"room": 2741, "floor": "27", "tower": 2}, {"room": 2743, "floor": "27", "tower": 2}, {"room": 2744, "floor": "27", "tower": 2}, {"room": 2831, "floor": "28", "tower": 2}, {"room": 2833, "floor": "28", "tower": 2}, {"room": 2834, "floor": "28", "tower": 2}, {"room": 2835, "floor": "28", "tower": 2}, {"room": 2837, "floor": "28", "tower": 2}, {"room": 2839, "floor": "28", "tower": 2}, {"room": 2841, "floor": "28", "tower": 2}, {"room": 2843, "floor": "28", "tower": 2}, {"room": 2844, "floor": "28", "tower": 2}, {"room": 2931, "floor": "29", "tower": 2}, {"room": 2933, "floor": "29", "tower": 2}, {"room": 2934, "floor": "29", "tower": 2}, {"room": 2935, "floor": "29", "tower": 2}, {"room": 2937, "floor": "29", "tower": 2}, {"room": 2939, "floor": "29", "tower": 2}, {"room": 2941, "floor": "29", "tower": 2}, {"room": 2943, "floor": "29", "tower": 2}, {"room": 2944, "floor": "29", "tower": 2}];
+const BATH_SET    = new Set([1003, 1006, 1007, 1012, 1013, 1016, 1031, 1033, 1034, 1035, 1037, 1040, 1042, 1043, 1103, 1106, 1107, 1112, 1113, 1116, 1131, 1133, 1134, 1135, 1137, 1140, 1142, 1143, 1203, 1206, 1207, 1212, 1213, 1216, 1231, 1233, 1234, 1235, 1237, 1240, 1242, 1243, 1403, 1406, 1407, 1412, 1413, 1416, 1431, 1433, 1434, 1435, 1437, 1440, 1442, 1443, 1501, 1503, 1507, 1509, 1512, 1516, 1517, 1531, 1533, 1534, 1535, 1537, 1540, 1542, 1543, 1601, 1603, 1607, 1609, 1612, 1616, 1617, 1631, 1633, 1634, 1637, 1639, 1642, 1644, 1701, 1703, 1707, 1709, 1712, 1716, 1717, 1731, 1733, 1734, 1737, 1739, 1742, 1744, 1801, 1803, 1807, 1809, 1812, 1816, 1817, 1831, 1833, 1834, 1837, 1839, 1842, 1844, 1901, 1903, 1906, 1908, 1909, 1911, 1913, 1916, 1917, 1931, 1933, 1934, 1937, 1939, 1942, 1944, 2001, 2003, 2006, 2008, 2009, 2011, 2013, 2016, 2017, 2031, 2033, 2034, 2037, 2040, 2043, 2044, 2101, 2103, 2106, 2108, 2109, 2111, 2113, 2116, 2117, 2131, 2133, 2134, 2137, 2139, 2141, 2143, 2144, 2201, 2203, 2206, 2208, 2209, 2211, 2213, 2216, 2217, 2231, 2233, 2234, 2237, 2239, 2241, 2243, 2244, 2301, 2303, 2306, 2308, 2309, 2311, 2313, 2316, 2317, 2331, 2333, 2334, 2337, 2339, 2341, 2343, 2344, 2401, 2403, 2406, 2408, 2409, 2411, 2413, 2416, 2417, 2431, 2433, 2434, 2437, 2439, 2441, 2443, 2444, 2531, 2533, 2534, 2537, 2539, 2541, 2543, 2544, 2631, 2633, 2634, 2637, 2639, 2641, 2643, 2644, 2731, 2733, 2734, 2737, 2739, 2741, 2743, 2744, 2831, 2833, 2834, 2837, 2839, 2841, 2843, 2844, 2931, 2933, 2934, 2937, 2939, 2941, 2943, 2944]);
+
+let t1Rooms = EMBEDDED_T1;
+let t2Rooms = EMBEDDED_T2;
+let bathSet  = BATH_SET;
+let schedule = [];
+
+const TOTAL_DAYS    = 83;
+const ROOMS_PER_DAY = 5;
+
+// ══ MONTH NAMES (Thai short) ══
+const MONTH_TH_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const MONTH_EN_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ══ LIVE FETCH ══
+async function loadFromSheets(){
+  const id=document.getElementById('sheetId').value.trim();
+  const parts=document.getElementById('sheetNames').value.split('|').map(s=>s.trim());
+  if(!id){showErr('กรุณาใส่ Sheet ID');return;}
+  setStatus('load','กำลังโหลด...');progShow(true,15);hideErr();
+  try{
+    const enc=s=>encodeURIComponent(s);
+    const base=`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:json&sheet=`;
+    const fetchSheet=async(name)=>{
+      const url=base+enc(name);
+      const res=await fetch(url);
+      if(!res.ok) throw new Error(`โหลด sheet "${name}" ไม่สำเร็จ (HTTP ${res.status}) — ตรวจสอบว่า Sheet เป็น Public`);
+      const txt=await res.text();
+      // Google wraps response in: google.visualization.Query.setResponse({...});
+      const json=JSON.parse(txt.replace(/^[^(]+\(|\);?\s*$/g,''));
+      if(json.status==='error') throw new Error(`Sheet "${name}": ${json.errors?.[0]?.detailed_message||'ข้อผิดพลาดไม่ทราบสาเหตุ'}`);
+      return json;
+    };
+    progShow(true,20);
+    const [j1,j2]=await Promise.all([
+      fetchSheet(parts[0]||'ห้องทั้งหมด'),
+      fetchSheet(parts[1]||'database')
+    ]);
+    progShow(true,65);
+    const all=extractRoomsFromGViz(j1);
+    const db =extractRoomsFromGViz(j2);
+    if(all.length===0) throw new Error(`ไม่พบข้อมูลห้องใน sheet "${parts[0]||'ห้องทั้งหมด'}" — ตรวจสอบชื่อ sheet และรูปแบบข้อมูล`);
+    t1Rooms=all.filter(r=>r.tower===1);
+    t2Rooms=all.filter(r=>r.tower===2);
+    bathSet=new Set(db.map(r=>r.room));
+    progShow(true,100); setTimeout(()=>progShow(false),400);
+    setStatus('ok',`โหลดสำเร็จ · T1:${t1Rooms.length} · T2:${t2Rooms.length} · มีอ่าง:${bathSet.size}`);
+    hideErr();
+  }catch(e){
+    progShow(false);
+    setStatus('err','โหลดล้มเหลว');
+    let msg=e.message||'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+    if(msg.toLowerCase().includes('failed to fetch')||msg.toLowerCase().includes('networkerror')){
+      msg='เชื่อมต่อไม่ได้ — ตรวจสอบว่า Google Sheet ตั้งค่าเป็น "Anyone with the link" (Viewer) แล้ว';
+    }
+    showErr(msg);
+  }
+}
+
+function extractRoomsFromGViz(gviz){
+  const rooms=[];
+  const rows=gviz?.table?.rows||[];
+  for(const row of rows){
+    const cells=row.c||[];
+    for(const cell of cells){
+      const val=cell?.v;
+      const n=parseInt(val);
+      if(!isNaN(n)&&n>=1000&&n<=9999){
+        const last2=n%100;
+        const tower=(last2>=1&&last2<=29)?1:2;
+        const fl=String(Math.floor(n/100)%100);
+        if(!rooms.find(r=>r.room===n)) rooms.push({room:n,floor:fl,tower});
+      }
+    }
+  }
+  return rooms;
+}
+
+// ══ RANDOMIZE ══
+function randomize(){
+  const p1=t1Rooms.map(r=>r.room); const p2=t2Rooms.map(r=>r.room);
+  shuffle(p1); shuffle(p2);
+  const plan=buildTowerPlan(TOTAL_DAYS);
+  schedule=[]; let i1=0,i2=0;
+  for(let d=0;d<TOTAL_DAYS;d++){
+    const tw=plan[d]; const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
+    const pool=tw===1?p1:p2; let idx=tw===1?i1:i2;
+    const dayRooms=[];
+    for(let r=0;r<need;r++){
+      if(idx>=pool.length)idx=0;
+      const rn=pool[idx++];
+      const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
+      dayRooms.push({room:rn,floor:meta?meta.floor:'?',hasBath:bathSet.has(rn)});
+    }
+    if(tw===1)i1=idx;else i2=idx;
+    schedule.push({day:d+1,tower:tw,rooms:dayRooms});
+  }
+  renderResults(); renderStats();
+  document.getElementById('btnReset').disabled=false;
+  document.getElementById('btnPdf').disabled=false;
+  document.getElementById('resSection').style.display='';
+  document.getElementById('statsGrid').style.display='';
+  hideErr();
+}
+
+function buildTowerPlan(n){
+  const plan=[];let cur=1,cnt=0,len=2;
+  for(let i=0;i<n;i++){plan.push(cur);cnt++;if(cnt>=len){cur=cur===1?2:1;cnt=0;len=len===2?3:2;}}
+  return plan;
+}
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
+
+// ══ RENDER WEB ══
+function renderResults(){
+  const grid=document.getElementById('daysGrid');
+  grid.innerHTML='';
+  document.getElementById('resBadge').textContent=schedule.length+' วัน';
+  schedule.forEach((day,i)=>{
+    const card=document.createElement('div');
+    card.className='day-card';
+    card.style.animationDelay=Math.min(i*.015,.5)+'s';
+    const tc=day.tower===1?'t1':'t2';
+    const rows=day.rooms.map(r=>{
+      const bc=r.hasBath?'bath-yes':'bath-no';
+      const bt=r.hasBath?'🛁 มีอ่าง':'🚿 ไม่มีอ่าง';
+      return `<div class="room-item"><div class="room-left"><span class="room-no">${r.room}</span><span class="room-floor">ชั้น ${r.floor}</span></div><span class="bath-tag ${bc}">${bt}</span></div>`;
+    }).join('');
+    card.innerHTML=`<div class="day-head"><div><div class="day-lbl">วันที่</div><div class="day-num">${day.day}</div></div><span class="tower-tag ${tc}">Tower ${day.tower}</span></div><div class="rooms-list">${rows}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderStats(){
+  const all=schedule.flatMap(d=>d.rooms);
+  const t1c=schedule.filter(d=>d.tower===1).reduce((s,d)=>s+d.rooms.length,0);
+  const t2c=schedule.filter(d=>d.tower===2).reduce((s,d)=>s+d.rooms.length,0);
+  const bath=all.filter(r=>r.hasBath).length;
+  document.getElementById('sTotal').textContent=all.length;
+  document.getElementById('sDays').textContent=schedule.length;
+  document.getElementById('sT1').textContent=t1c;
+  document.getElementById('sT2').textContent=t2c;
+  document.getElementById('sBath').textContent=bath;
+  document.getElementById('sNoBath').textContent=all.length-bath;
+}
+
+// ══════════════════════════════════════════════════════
+//  CALENDAR PDF  — แบบในรูปตัวอย่าง
+//  Layout: A4 landscape, 7 cols × N rows
+//  Each cell: Month T1/T2 + date number + room list
+// ══════════════════════════════════════════════════════
+async function exportCalendarPDF(){
+  if(!schedule.length) return;
+  const {jsPDF}=window.jspdf;
+
+  // A4 Landscape
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const PW=297, PH=210;
+  const ML=6, MR=6, MT=14, MB=6;
+  const COLS=7;
+  const cellW=(PW-ML-MR)/COLS;
+
+  // Determine start date — use today's month as reference, start on day 1
+  const startDate=new Date();
+  startDate.setDate(1);
+
+  // Group schedule days — figure out how many rows needed
+  // Each page = one calendar "month block" of 7 cols
+  // We'll lay out all 83 days sequentially across pages, 7 days per row
+  // Pages break every time we fill a page
+
+  // Calculate rows per page based on cell height needed
+  // Each cell needs: header ~6mm + up to 5 rooms * 5.5mm = ~33.5mm + padding
+  const CELL_H_MIN = 38; // mm per cell
+  const HEADER_H   = 10; // top header row
+  const ROWS_PER_PAGE = Math.floor((PH - MT - MB - HEADER_H) / CELL_H_MIN);
+  // days per page
+  const DAYS_PER_PAGE = COLS * ROWS_PER_PAGE;
+
+  let pg=0;
+  let dayIdx=0;
+
+  while(dayIdx < schedule.length){
+    if(pg > 0) doc.addPage('a4','landscape');
+    pg++;
+
+    const daysThisPage=schedule.slice(dayIdx, dayIdx+DAYS_PER_PAGE);
+    const rowsThisPage=Math.ceil(daysThisPage.length/COLS);
+    const cellH=(PH-MT-MB-HEADER_H)/Math.max(rowsThisPage,1);
+
+    // ── PAGE BORDER ──
+    doc.setDrawColor(200,200,200);
+    doc.setLineWidth(0.3);
+    doc.rect(ML, MT, PW-ML-MR, PH-MT-MB);
+
+    // ── WEEKDAY HEADER ROW ──
+    const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    for(let c=0;c<COLS;c++){
+      const cx=ML+c*cellW;
+      doc.setFillColor(245,246,250);
+      doc.rect(cx, MT, cellW, HEADER_H, 'F');
+      doc.setDrawColor(210,215,230);
+      doc.setLineWidth(0.2);
+      doc.rect(cx, MT, cellW, HEADER_H);
+      doc.setFontSize(8);
+      doc.setTextColor(120,130,155);
+      doc.setFont('helvetica','bold');
+      doc.text(DAYS[c], cx+cellW/2, MT+HEADER_H*0.65, {align:'center'});
+    }
+
+    // ── CELLS ──
+    for(let i=0;i<daysThisPage.length;i++){
+      const day=daysThisPage[i];
+      const col=i%COLS;
+      const row=Math.floor(i/COLS);
+      const cx=ML+col*cellW;
+      const cy=MT+HEADER_H+row*cellH;
+
+      // Cell bg
+      doc.setFillColor(255,255,255);
+      doc.rect(cx, cy, cellW, cellH, 'F');
+
+      // Cell border
+      doc.setDrawColor(210,215,228);
+      doc.setLineWidth(0.2);
+      doc.rect(cx, cy, cellW, cellH);
+
+      // ── Tower color accent bar (left side) ──
+      if(day.tower===1){
+        doc.setFillColor(79,126,245); // blue T1
+      } else {
+        doc.setFillColor(124,85,240); // purple T2
+      }
+      doc.rect(cx, cy, 2.5, cellH, 'F');
+
+      // ── Month label (Jun / Jul style) ──
+      // Compute actual date for this day
+      const date=new Date(startDate);
+      date.setDate(startDate.getDate() + (dayIdx+i));
+      const mLabel=MONTH_EN_SHORT[date.getMonth()];
+
+      // Month + Tower label  e.g. "Jun  T1"
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica','bold');
+      if(day.tower===1){
+        doc.setTextColor(79,126,245);
+      } else {
+        doc.setTextColor(124,85,240);
+      }
+      doc.text(mLabel, cx+4.5, cy+5.5);
+      doc.text('T'+day.tower, cx+cellW-7, cy+5.5);
+
+      // Day number (top right area)
+      doc.setFontSize(8.5);
+      doc.setTextColor(50,60,80);
+      doc.setFont('helvetica','bold');
+      doc.text(String(date.getDate()), cx+cellW/2, cy+5.5, {align:'center'});
+
+      // Divider line under header
+      doc.setDrawColor(220,225,238);
+      doc.setLineWidth(0.15);
+      doc.line(cx+2.5, cy+7.5, cx+cellW, cy+7.5);
+
+      // ── Room list ──
+      let roomY=cy+11.5;
+      const lineH=Math.min((cellH-12)/day.rooms.length, 5.8);
+
+      day.rooms.forEach((rm,ri)=>{
+        // Bath circle marker (like ○ in the paper)
+        if(rm.hasBath){
+          doc.setDrawColor(60,180,120);
+          doc.setLineWidth(0.5);
+          doc.circle(cx+cellW-5, roomY-1.2, 1.4);
+          doc.setTextColor(60,180,120);
+        } else {
+          doc.setTextColor(180,80,80);
+        }
+
+        // "–" dash prefix like paper
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica','normal');
+        doc.setTextColor(40,50,75);
+        doc.text('–', cx+4, roomY);
+
+        // Room number
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(7.5);
+        doc.text(String(rm.room), cx+7.5, roomY);
+
+        // Bath circle ○ on right (only if hasBath)
+        if(rm.hasBath){
+          doc.setDrawColor(50,160,110);
+          doc.setFillColor(255,255,255);
+          doc.setLineWidth(0.55);
+          doc.circle(cx+cellW-4.5, roomY-1.5, 1.5, 'S');
+        }
+
+        roomY+=lineH;
+      });
+    }
+
+    dayIdx+=DAYS_PER_PAGE;
+  }
+
+  // Totals footer on last page
+  const all=schedule.flatMap(d=>d.rooms);
+  const bath=all.filter(r=>r.hasBath).length;
+  doc.setFontSize(7);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(130,140,165);
+  doc.text(
+    `Room PMM Schedule · Staybridge Suites Bangkok · ${schedule.length} days · ${all.length} rooms · Bath: ${bath} · No Bath: ${all.length-bath}`,
+    PW/2, PH-2, {align:'center'}
+  );
+
+  doc.save(`pmm-calendar-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+// ══ UTIL ══
+function resetAll(){
+  schedule=[];
+  document.getElementById('daysGrid').innerHTML='';
+  document.getElementById('resSection').style.display='none';
+  document.getElementById('statsGrid').style.display='none';
+  document.getElementById('btnReset').disabled=true;
+  document.getElementById('btnPdf').disabled=true;
+}
+function setStatus(s,m){document.getElementById('statusTxt').textContent=m;const d=document.getElementById('dot');d.className='dot'+(s==='ok'?' ok':s==='err'?' err':s==='load'?' load':'');}
+function showErr(m){const b=document.getElementById('errBox');b.textContent='⚠ '+m;b.style.display='';}
+function hideErr(){document.getElementById('errBox').style.display='none';}
+function progShow(v,p){document.getElementById('prog').style.display=v?'block':'none';if(p!==undefined)document.getElementById('progBar').style.width=p+'%';}
+</script>
+</body>
+</html>
