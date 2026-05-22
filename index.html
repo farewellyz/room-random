@@ -261,44 +261,40 @@ function extractRoomsFromGViz(gviz){
 
 // ══ RANDOMIZE ══
 function randomize(){
-  // สร้าง queue ไม่ซ้ำในรอบ: shuffle ทุกห้อง พอหมดรอบ shuffle ใหม่ต่อ
-  function makeQueue(rooms){
-    const base=rooms.map(r=>r.room);
-    const need=TOTAL_DAYS*ROOMS_PER_DAY+10;
-    const q=[];
-    while(q.length<need){const round=[...base];shuffle(round);q.push(...round);}
-    return q;
+  // shuffle ห้องทั้งหมด ไม่ซ้ำ ใช้ครบทุกห้องพอดี
+  const p1=[...t1Rooms]; shuffle(p1);
+  const p2=[...t2Rooms]; shuffle(p2);
+
+  // แบ่งเป็น slot 5 ห้อง/วัน (เศษที่เหลือเป็นวันสุดท้าย)
+  const t1Slots=[];
+  for(let i=0;i<p1.length;i+=ROOMS_PER_DAY) t1Slots.push({tower:1,rooms:p1.slice(i,i+ROOMS_PER_DAY)});
+  const t2Slots=[];
+  for(let i=0;i<p2.length;i+=ROOMS_PER_DAY) t2Slots.push({tower:2,rooms:p2.slice(i,i+ROOMS_PER_DAY)});
+
+  // สลับ T1/T2 แบบ 2-3-2-3
+  const slots=[];
+  let i1=0,i2=0,cur=1,cnt=0,len=2;
+  while(i1<t1Slots.length||i2<t2Slots.length){
+    if(cur===1&&i1<t1Slots.length) slots.push(t1Slots[i1++]);
+    else if(cur===2&&i2<t2Slots.length) slots.push(t2Slots[i2++]);
+    else if(i1<t1Slots.length) slots.push(t1Slots[i1++]);
+    else slots.push(t2Slots[i2++]);
+    cnt++;
+    if(cnt>=len){cur=cur===1?2:1;cnt=0;len=len===2?3:2;}
   }
-  const q1=makeQueue(t1Rooms);
-  const q2=makeQueue(t2Rooms);
-  const plan=buildTowerPlan(TOTAL_DAYS);
-  schedule=[];let i1=0,i2=0;
-  for(let d=0;d<TOTAL_DAYS;d++){
-    const tw=plan[d];
-    const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
-    const q=tw===1?q1:q2;
-    let idx=tw===1?i1:i2;
-    const dayRooms=[];
-    for(let r=0;r<need;r++){
-      const rn=q[idx++];
-      const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
-      dayRooms.push({room:rn,floor:meta?meta.floor:'?',hasBath:bathSet.has(rn)});
-    }
-    if(tw===1)i1=idx;else i2=idx;
-    schedule.push({day:d+1,tower:tw,rooms:dayRooms});
-  }
+
+  schedule=slots.map((s,idx)=>({
+    day:idx+1, tower:s.tower,
+    rooms:s.rooms.map(r=>({room:r.room,floor:r.floor,hasBath:bathSet.has(r.room)}))
+  }));
+
   renderResults();renderStats();
   document.getElementById('btnReset').disabled=false;
   document.getElementById('btnPdf').disabled=false;
   document.getElementById('resSection').style.display='';
   document.getElementById('statsGrid').style.display='';
+  document.getElementById('btnRand').textContent='\u{1F3B2} \u0E2A\u0E38\u0E48\u0E21 '+schedule.length+' \u0E27\u0E31\u0E19 ('+(p1.length+p2.length)+' \u0E2B\u0E49\u0E2D\u0E07)';
   hideErr();
-}
-
-function buildTowerPlan(n){
-  const plan=[];let cur=1,cnt=0,len=2;
-  for(let i=0;i<n;i++){plan.push(cur);cnt++;if(cnt>=len){cur=cur===1?2:1;cnt=0;len=len===2?3:2;}}
-  return plan;
 }
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
 
