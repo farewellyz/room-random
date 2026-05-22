@@ -400,58 +400,62 @@ async function exportCalendarPDF(){
   if(!schedule.length) return;
   const {jsPDF}=window.jspdf;
 
-  // A4 Landscape
-  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  const PW=297, PH=210;
-  const ML=6, MR=6, MT=14, MB=6;
+  // A4 Portrait — 2 pages fit all 83 days (7 cols × 7 rows = 49 days/page)
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const PW=210, PH=297;
+  const ML=5, MR=5, MT=12, MB=5;
   const COLS=7;
   const cellW=(PW-ML-MR)/COLS;
 
-  // Determine start date — use selected date from picker
+  // Tower colors matching web UI
+  // T1 = green (#22d3a0), T2 = red (#f56565)
+  const T1_RGB=[34,211,160];
+  const T2_RGB=[245,101,101];
+  const T1_LIGHT=[34,211,160,0.15]; // used for bg tint
+  const T2_LIGHT=[245,101,101,0.15];
+
   const startDate=getStartDate();
 
-  // Group schedule days — figure out how many rows needed
-  // Each page = one calendar "month block" of 7 cols
-  // We'll lay out all 83 days sequentially across pages, 7 days per row
-  // Pages break every time we fill a page
-
-  // Calculate rows per page based on cell height needed
-  // Each cell needs: header ~6mm + up to 5 rooms * 5.5mm = ~33.5mm + padding
-  const CELL_H_MIN = 38; // mm per cell
-  const HEADER_H   = 10; // top header row
-  const ROWS_PER_PAGE = Math.floor((PH - MT - MB - HEADER_H) / CELL_H_MIN);
-  // days per page
-  const DAYS_PER_PAGE = COLS * ROWS_PER_PAGE;
+  const HEADER_H=9;
+  const CELL_H_MIN=36;
+  const ROWS_PER_PAGE=Math.floor((PH-MT-MB-HEADER_H)/CELL_H_MIN); // = 7
+  const DAYS_PER_PAGE=COLS*ROWS_PER_PAGE; // = 49
 
   let pg=0;
   let dayIdx=0;
 
   while(dayIdx < schedule.length){
-    if(pg > 0) doc.addPage('a4','landscape');
+    if(pg > 0) doc.addPage('a4','portrait');
     pg++;
 
     const daysThisPage=schedule.slice(dayIdx, dayIdx+DAYS_PER_PAGE);
     const rowsThisPage=Math.ceil(daysThisPage.length/COLS);
-    const cellH=(PH-MT-MB-HEADER_H)/Math.max(rowsThisPage,1);
+    const cellH=(PH-MT-MB-HEADER_H)/ROWS_PER_PAGE;
+
+    // ── PAGE TITLE ──
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(80,90,110);
+    doc.text('Room PMM Schedule · Staybridge Suites Bangkok Sukhumvit', PW/2, MT-3, {align:'center'});
 
     // ── PAGE BORDER ──
-    doc.setDrawColor(200,200,200);
-    doc.setLineWidth(0.3);
+    doc.setDrawColor(200,200,210);
+    doc.setLineWidth(0.25);
     doc.rect(ML, MT, PW-ML-MR, PH-MT-MB);
 
     // ── WEEKDAY HEADER ROW ──
-    const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const DAYS_LBL=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     for(let c=0;c<COLS;c++){
       const cx=ML+c*cellW;
-      doc.setFillColor(245,246,250);
+      doc.setFillColor(240,242,248);
       doc.rect(cx, MT, cellW, HEADER_H, 'F');
       doc.setDrawColor(210,215,230);
-      doc.setLineWidth(0.2);
+      doc.setLineWidth(0.18);
       doc.rect(cx, MT, cellW, HEADER_H);
-      doc.setFontSize(8);
-      doc.setTextColor(120,130,155);
+      doc.setFontSize(7.5);
+      doc.setTextColor(90,100,130);
       doc.setFont('helvetica','bold');
-      doc.text(DAYS[c], cx+cellW/2, MT+HEADER_H*0.65, {align:'center'});
+      doc.text(DAYS_LBL[c], cx+cellW/2, MT+HEADER_H*0.68, {align:'center'});
     }
 
     // ── CELLS ──
@@ -462,83 +466,88 @@ async function exportCalendarPDF(){
       const cx=ML+col*cellW;
       const cy=MT+HEADER_H+row*cellH;
 
-      // Cell bg
-      doc.setFillColor(255,255,255);
+      const isT1=day.tower===1;
+      const tRGB=isT1?T1_RGB:T2_RGB;
+
+      // Cell bg — very light tint of tower color
+      if(isT1){
+        doc.setFillColor(240,252,248); // light green tint
+      } else {
+        doc.setFillColor(255,245,245); // light red tint
+      }
       doc.rect(cx, cy, cellW, cellH, 'F');
 
       // Cell border
-      doc.setDrawColor(210,215,228);
-      doc.setLineWidth(0.2);
+      doc.setDrawColor(210,215,225);
+      doc.setLineWidth(0.18);
       doc.rect(cx, cy, cellW, cellH);
 
       // ── Tower color accent bar (left side) ──
-      if(day.tower===1){
-        doc.setFillColor(79,126,245); // blue T1
-      } else {
-        doc.setFillColor(124,85,240); // purple T2
-      }
-      doc.rect(cx, cy, 2.5, cellH, 'F');
+      doc.setFillColor(...tRGB);
+      doc.rect(cx, cy, 2.2, cellH, 'F');
 
-      // ── Month label (Jun / Jul style) ──
-      // Compute actual date for this day
+      // ── Header area bg ──
+      if(isT1){
+        doc.setFillColor(210,245,235);
+      } else {
+        doc.setFillColor(252,225,225);
+      }
+      doc.rect(cx+2.2, cy, cellW-2.2, 8, 'F');
+
+      // Compute actual date
       const date=new Date(startDate);
       date.setDate(startDate.getDate() + (dayIdx+i));
       const mLabel=MONTH_EN_SHORT[date.getMonth()];
 
-      // Month + Tower label  e.g. "Jun  T1"
-      doc.setFontSize(7.5);
+      // Month label (left)
+      doc.setFontSize(6.5);
       doc.setFont('helvetica','bold');
-      if(day.tower===1){
-        doc.setTextColor(79,126,245);
-      } else {
-        doc.setTextColor(124,85,240);
-      }
-      doc.text(mLabel, cx+4.5, cy+5.5);
-      doc.text('T'+day.tower, cx+cellW-7, cy+5.5);
+      doc.setTextColor(...tRGB);
+      doc.text(mLabel, cx+4, cy+5.5);
 
-      // Day number (top right area)
-      doc.setFontSize(8.5);
-      doc.setTextColor(50,60,80);
+      // Tower label (right)
+      doc.text('T'+day.tower, cx+cellW-6, cy+5.5);
+
+      // Day number (center)
+      doc.setFontSize(8);
+      doc.setTextColor(30,40,60);
       doc.setFont('helvetica','bold');
       doc.text(String(date.getDate()), cx+cellW/2, cy+5.5, {align:'center'});
 
       // Divider line under header
-      doc.setDrawColor(220,225,238);
-      doc.setLineWidth(0.15);
-      doc.line(cx+2.5, cy+7.5, cx+cellW, cy+7.5);
+      doc.setDrawColor(...tRGB);
+      doc.setLineWidth(0.4);
+      doc.line(cx+2.2, cy+8, cx+cellW, cy+8);
 
       // ── Room list ──
       let roomY=cy+11.5;
-      const lineH=Math.min((cellH-12)/day.rooms.length, 5.8);
+      const lineH=Math.min((cellH-10)/Math.max(day.rooms.length,1), 5.5);
 
-      day.rooms.forEach((rm,ri)=>{
-        // Bath circle marker (like ○ in the paper)
-        if(rm.hasBath){
-          doc.setDrawColor(60,180,120);
-          doc.setLineWidth(0.5);
-          doc.circle(cx+cellW-5, roomY-1.2, 1.4);
-          doc.setTextColor(60,180,120);
-        } else {
-          doc.setTextColor(180,80,80);
-        }
-
-        // "–" dash prefix like paper
-        doc.setFontSize(7.5);
+      day.rooms.forEach((rm)=>{
+        // dash
+        doc.setFontSize(7);
         doc.setFont('helvetica','normal');
-        doc.setTextColor(40,50,75);
-        doc.text('–', cx+4, roomY);
+        doc.setTextColor(60,70,90);
+        doc.text('–', cx+3.5, roomY);
 
-        // Room number
+        // Room number — color by tower
         doc.setFont('helvetica','bold');
-        doc.setFontSize(7.5);
-        doc.text(String(rm.room), cx+7.5, roomY);
+        doc.setFontSize(7);
+        doc.setTextColor(...tRGB);
+        doc.text(String(rm.room), cx+7, roomY);
 
-        // Bath circle ○ on right (only if hasBath)
+        // Bath circle ○ on right
         if(rm.hasBath){
-          doc.setDrawColor(50,160,110);
+          doc.setDrawColor(34,180,120);
           doc.setFillColor(255,255,255);
           doc.setLineWidth(0.55);
-          doc.circle(cx+cellW-4.5, roomY-1.5, 1.5, 'S');
+          doc.circle(cx+cellW-4, roomY-1.5, 1.5, 'S');
+        } else {
+          // X mark for no bath
+          doc.setDrawColor(200,80,80);
+          doc.setLineWidth(0.4);
+          doc.line(cx+cellW-5.5, roomY-2.8, cx+cellW-2.5, roomY-0.2);
+          doc.line(cx+cellW-5.5, roomY-0.2, cx+cellW-2.5, roomY-2.8);
         }
 
         roomY+=lineH;
@@ -548,15 +557,42 @@ async function exportCalendarPDF(){
     dayIdx+=DAYS_PER_PAGE;
   }
 
-  // Totals footer on last page
+  // ── LEGEND on last page ──
   const all=schedule.flatMap(d=>d.rooms);
   const bath=all.filter(r=>r.hasBath).length;
-  doc.setFontSize(7);
+  const footY=PH-MB+2;
+
+  // T1 legend swatch
+  doc.setFillColor(...T1_RGB);
+  doc.rect(ML, footY-2.5, 5, 2.5, 'F');
+  doc.setFontSize(6.5);
   doc.setFont('helvetica','normal');
+  doc.setTextColor(60,70,90);
+  doc.text('Tower 1', ML+6, footY-0.5);
+
+  // T2 legend swatch
+  doc.setFillColor(...T2_RGB);
+  doc.rect(ML+22, footY-2.5, 5, 2.5, 'F');
+  doc.text('Tower 2', ML+28, footY-0.5);
+
+  // Bath legend
+  doc.setDrawColor(34,180,120);
+  doc.setLineWidth(0.55);
+  doc.circle(ML+48, footY-1.2, 1.5, 'S');
+  doc.text('มีอ่าง', ML+51, footY-0.5);
+
+  // No bath X legend
+  doc.setDrawColor(200,80,80);
+  doc.setLineWidth(0.4);
+  doc.line(ML+60, footY-2.5, ML+62.5, footY-0.2);
+  doc.line(ML+60, footY-0.2, ML+62.5, footY-2.5);
+  doc.text('ไม่มีอ่าง', ML+64, footY-0.5);
+
+  // Footer summary
   doc.setTextColor(130,140,165);
   doc.text(
-    `Room PMM Schedule · Staybridge Suites Bangkok · ${schedule.length} days · ${all.length} rooms · Bath: ${bath} · No Bath: ${all.length-bath}`,
-    PW/2, PH-2, {align:'center'}
+    `Total ${schedule.length} days · ${all.length} rooms · Bath: ${bath} · No Bath: ${all.length-bath}`,
+    PW-MR, footY-0.5, {align:'right'}
   );
 
   doc.save(`pmm-calendar-${new Date().toISOString().slice(0,10)}.pdf`);
