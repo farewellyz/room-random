@@ -261,24 +261,33 @@ function extractRoomsFromGViz(gviz){
 
 // ══ RANDOMIZE ══
 function randomize(){
-  const p1=t1Rooms.map(r=>r.room); const p2=t2Rooms.map(r=>r.room);
-  shuffle(p1); shuffle(p2);
+  // สร้าง queue ไม่ซ้ำในรอบ: shuffle ทุกห้อง พอหมดรอบ shuffle ใหม่ต่อ
+  function makeQueue(rooms){
+    const base=rooms.map(r=>r.room);
+    const need=TOTAL_DAYS*ROOMS_PER_DAY+10;
+    const q=[];
+    while(q.length<need){const round=[...base];shuffle(round);q.push(...round);}
+    return q;
+  }
+  const q1=makeQueue(t1Rooms);
+  const q2=makeQueue(t2Rooms);
   const plan=buildTowerPlan(TOTAL_DAYS);
-  schedule=[]; let i1=0,i2=0;
+  schedule=[];let i1=0,i2=0;
   for(let d=0;d<TOTAL_DAYS;d++){
-    const tw=plan[d]; const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
-    const pool=tw===1?p1:p2; let idx=tw===1?i1:i2;
+    const tw=plan[d];
+    const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
+    const q=tw===1?q1:q2;
+    let idx=tw===1?i1:i2;
     const dayRooms=[];
     for(let r=0;r<need;r++){
-      if(idx>=pool.length)idx=0;
-      const rn=pool[idx++];
+      const rn=q[idx++];
       const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
       dayRooms.push({room:rn,floor:meta?meta.floor:'?',hasBath:bathSet.has(rn)});
     }
     if(tw===1)i1=idx;else i2=idx;
     schedule.push({day:d+1,tower:tw,rooms:dayRooms});
   }
-  renderResults(); renderStats();
+  renderResults();renderStats();
   document.getElementById('btnReset').disabled=false;
   document.getElementById('btnPdf').disabled=false;
   document.getElementById('resSection').style.display='';
