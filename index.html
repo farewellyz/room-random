@@ -94,8 +94,8 @@ h1{font-size:clamp(26px,5vw,50px);font-weight:700;background:linear-gradient(135
 .day-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:'Space Mono',monospace}
 .day-num{font-family:'Space Mono',monospace;font-size:15px;font-weight:700}
 .tower-tag{font-size:9px;font-weight:700;padding:3px 9px;border-radius:999px;font-family:'Space Mono',monospace}
-.tower-tag.t1{background:rgba(79,126,245,.12);color:var(--t1);border:1px solid rgba(79,126,245,.24)}
-.tower-tag.t2{background:rgba(124,85,240,.12);color:var(--t2);border:1px solid rgba(124,85,240,.24)}
+.tower-tag.t1{background:rgba(34,211,160,.12);color:var(--t1);border:1px solid rgba(34,211,160,.28)}
+.tower-tag.t2{background:rgba(245,101,101,.12);color:var(--t2);border:1px solid rgba(245,101,101,.28)}
 .rooms-list{padding:8px 11px;display:flex;flex-direction:column;gap:3px}
 .room-item{display:flex;align-items:center;justify-content:space-between;padding:5px 9px;background:var(--surf2);border-radius:6px}
 .room-left{display:flex;align-items:center;gap:7px}
@@ -177,8 +177,8 @@ h1{font-size:clamp(26px,5vw,50px);font-weight:700;background:linear-gradient(135
   <div class="stats-grid" id="statsGrid" style="display:none">
     <div class="stat-card blue"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">ห้องทั้งหมด</div></div>
     <div class="stat-card teal"><div class="stat-val" id="sDays">0</div><div class="stat-lbl">วัน</div></div>
-    <div class="stat-card blue"><div class="stat-val" id="sT1">0</div><div class="stat-lbl">Tower 1</div></div>
-    <div class="stat-card purple"><div class="stat-val" id="sT2">0</div><div class="stat-lbl">Tower 2</div></div>
+    <div class="stat-card green"><div class="stat-val" id="sT1">0</div><div class="stat-lbl">Tower 1</div></div>
+    <div class="stat-card red"><div class="stat-val" id="sT2">0</div><div class="stat-lbl">Tower 2</div></div>
     <div class="stat-card green"><div class="stat-val" id="sBath">0</div><div class="stat-lbl">มีอ่าง 🛁</div></div>
     <div class="stat-card red"><div class="stat-val" id="sNoBath">0</div><div class="stat-lbl">ไม่มีอ่าง 🚿</div></div>
   </div>
@@ -303,33 +303,35 @@ function extractRoomsFromGViz(gviz){
 // ══ RANDOMIZE ══
 function randomize(){
   hideErr();
-  const p1=t1Rooms.map(r=>r.room); const p2=t2Rooms.map(r=>r.room);
+  const p1=t1Rooms.map(r=>r.room);
+  const p2=t2Rooms.map(r=>r.room);
   shuffle(p1); shuffle(p2);
+
   const plan=buildTowerPlan(TOTAL_DAYS);
-  schedule=[]; let i1=0,i2=0;
+  schedule=[]; let i1=0, i2=0;
 
   for(let d=0;d<TOTAL_DAYS;d++){
-    const tw=plan[d]; const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
+    const tw=plan[d];
+    const need=(d===TOTAL_DAYS-1)?1:ROOMS_PER_DAY;
     const pool=tw===1?p1:p2;
-    let idx=tw===1?i1:i2;
-    const dayRooms=[];
-    const usedToday=new Set();
-    for(let r=0;r<need;r++){
-      // ข้ามห้องที่ใช้แล้วในวันนี้ (ป้องกันซ้ำภายในวัน)
-      while(idx<pool.length && usedToday.has(pool[idx])) idx++;
-      if(idx>=pool.length){
-        showErr(`ห้อง Tower ${tw} ไม่พอสำหรับวันที่ ${d+1} — pool หมด`);
-        schedule=[];
-        return;
-      }
-      const rn=pool[idx++];
-      usedToday.add(rn);
-      const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
-      dayRooms.push({room:rn,floor:meta?meta.floor:'?',hasBath:bathSet.has(rn)});
+    const idx=tw===1?i1:i2;
+
+    if(idx+need>pool.length){
+      showErr(`ห้อง Tower ${tw} ไม่พอสำหรับวันที่ ${d+1} (ต้องการ ${need} เหลือ ${pool.length-idx})`);
+      schedule=[];
+      return;
     }
-    if(tw===1)i1=idx;else i2=idx;
-    schedule.push({day:d+1,tower:tw,rooms:dayRooms});
+
+    const dayRooms=[];
+    for(let r=0;r<need;r++){
+      const rn=pool[idx+r];
+      const meta=(tw===1?t1Rooms:t2Rooms).find(x=>x.room===rn);
+      dayRooms.push({room:rn, floor:meta?meta.floor:'?', hasBath:bathSet.has(rn)});
+    }
+    if(tw===1) i1+=need; else i2+=need;
+    schedule.push({day:d+1, tower:tw, rooms:dayRooms});
   }
+
   renderResults(); renderStats();
   document.getElementById('btnReset').disabled=false;
   document.getElementById('btnPdf').disabled=false;
@@ -338,18 +340,16 @@ function randomize(){
 }
 
 function buildTowerPlan(n){
-  // สลับแบบตายตัว: T1 2 วัน, T2 2 วัน, T1 2 วัน, T2 2 วัน, ...
-  // T1=210 ห้อง → 42 วัน (42×5=210)
-  // T2=201 ห้อง → 40 วันปกติ (40×5=200) + 1 วันสุดท้าย (1 ห้อง) = 201
-  // รวม 82 วันปกติ + 1 วันสุดท้าย = 83 วัน
-  const tList=[];
-  // วนรูปแบบ 1,1,2,2 ซ้ำจนครบ 82 วัน แล้วปิดท้ายด้วย T2
+  // Pattern: T1,T1,T2,T2 วนซ้ำ
+  // 83 วัน → วันที่ 1-82 ใช้ pattern, วันที่ 83 = T2 เสมอ (ห้องสุดท้าย 1 ห้อง)
+  // ผลลัพธ์: T1=42 วัน (42x5=210 ห้อง), T2=41 วัน (40x5+1=201 ห้อง)
   const pattern=[1,1,2,2];
-  for(let d=0;d<n-1;d++){
-    tList.push(pattern[d%4]);
-  }
-  // วันสุดท้าย (วันที่ 83) เป็น T2 เสมอ (1 ห้อง)
+  const tList=[];
+  for(let d=0;d<n-1;d++) tList.push(pattern[d%4]);
   tList.push(2);
+  const c1=tList.filter(x=>x===1).length;
+  const c2=tList.filter(x=>x===2).length;
+  if(c1!==42||c2!==41) console.warn('buildTowerPlan: T1='+c1+' T2='+c2+' (expected 42/41)');
   return tList;
 }
 function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
@@ -364,11 +364,12 @@ function renderResults(){
     const card=document.createElement('div');
     card.className='day-card';
     card.style.animationDelay=Math.min(i*.015,.5)+'s';
+    card.style.borderLeft=`3px solid ${day.tower===1?'var(--t1)':'var(--t2)'}`;
     const tc=day.tower===1?'t1':'t2';
     const rows=day.rooms.map(r=>{
       const bc=r.hasBath?'bath-yes':'bath-no';
       const bt=r.hasBath?'🛁 มีอ่าง':'🚿 ไม่มีอ่าง';
-      return `<div class="room-item"><div class="room-left"><span class="room-no">${r.room}</span><span class="room-floor">ชั้น ${r.floor}</span></div><span class="bath-tag ${bc}">${bt}</span></div>`;
+      return `<div class="room-item"><div class="room-left"><span class="room-no" style="color:${day.tower===1?'var(--t1)':'var(--t2)'}">${r.room}</span><span class="room-floor">ชั้น ${r.floor}</span></div><span class="bath-tag ${bc}">${bt}</span></div>`;
     }).join('');
     const d=new Date(startDate); d.setDate(startDate.getDate()+i);
     const dateLbl=`${d.getDate()} ${MONTH_TH_SHORT[d.getMonth()]} ${d.getFullYear()+543}`;
@@ -560,7 +561,7 @@ async function exportCalendarPDF(){
   // ── LEGEND on last page ──
   const all=schedule.flatMap(d=>d.rooms);
   const bath=all.filter(r=>r.hasBath).length;
-  const footY=PH-MB+2;
+  const footY=PH-MB-1;
 
   // T1 legend swatch
   doc.setFillColor(...T1_RGB);
